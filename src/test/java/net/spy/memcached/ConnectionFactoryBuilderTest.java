@@ -95,22 +95,23 @@ public class ConnectionFactoryBuilderTest extends BaseMockCase {
 		OperationQueueFactory rQueueFactory = new DirectFactory(rQueue);
 		OperationQueueFactory wQueueFactory = new DirectFactory(wQueue);
 
-		ConnectionFactory f = b.setDaemon(true)
-			.setShouldOptimize(false)
-			.setFailureMode(FailureMode.Redistribute)
-			.setHashAlg(HashAlgorithm.KETAMA_HASH)
-			.setInitialObservers(Collections.singleton(testObserver))
-			.setOpFact(new BinaryOperationFactory())
-			.setOpTimeout(4225)
-			.setOpQueueFactory(opQueueFactory)
-			.setReadOpQueueFactory(rQueueFactory)
-			.setWriteOpQueueFactory(wQueueFactory)
-			.setReadBufferSize(19)
-			.setTranscoder(new WhalinTranscoder())
-			.setUseNagleAlgorithm(true)
-			.setLocatorType(Locator.CONSISTENT)
-			.setOpQueueMaxBlockTime(19)
-			.build();
+		b.setDaemon(true);
+		b.setShouldOptimize(false);
+		b.setFailureMode(FailureMode.Redistribute);
+		b.setHashAlg(HashAlgorithm.KETAMA_HASH);
+		b.setInitialObservers(Collections.singleton(testObserver));
+		b.setOpFact(new BinaryOperationFactory());
+		b.setOpTimeout(4225);
+		b.setOpQueueFactory(opQueueFactory);
+		b.setReadOpQueueFactory(rQueueFactory);
+		b.setWriteOpQueueFactory(wQueueFactory);
+		b.setReadBufferSize(19);
+		b.setTranscoder(new WhalinTranscoder());
+		b.setUseNagleAlgorithm(true);
+		b.setLocatorType(Locator.CONSISTENT);
+		b.setOpQueueMaxBlockTime(19);
+			
+		ConnectionFactory f = b.build();
 
 		assertEquals(4225, f.getOperationTimeout());
 		assertEquals(19, f.getReadBufSize());
@@ -145,14 +146,18 @@ public class ConnectionFactoryBuilderTest extends BaseMockCase {
 	}
 
 	public void testProtocolSetterBinary() {
+		b.setProtocol(Protocol.BINARY);
+		ConnectionFactory f = b.build();
 		assertTrue(
-			b.setProtocol(Protocol.BINARY).build().getOperationFactory()
+			f.getOperationFactory()
 			instanceof BinaryOperationFactory);
 	}
 
 	public void testProtocolSetterText() {
+		b.setProtocol(Protocol.TEXT);
+		ConnectionFactory f = b.build();
 		assertTrue(
-			b.setProtocol(Protocol.TEXT).build().getOperationFactory()
+			f.getOperationFactory()
 			instanceof AsciiOperationFactory);
 
 	}
