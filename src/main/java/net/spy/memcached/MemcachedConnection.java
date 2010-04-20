@@ -30,6 +30,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import net.spy.memcached.compat.SpyObject;
 import net.spy.memcached.ops.KeyedOperation;
 import net.spy.memcached.ops.Operation;
+import net.spy.memcached.ops.OperationException;
 import net.spy.memcached.ops.OperationState;
 
 /**
@@ -336,6 +337,7 @@ public final class MemcachedConnection extends SpyObject {
 				}
 			}
 		} catch(ClosedChannelException e) {
+			// Note, not all channel closes end up here
 			if(!shutDown) {
 				getLogger().info("Closed channel and not shutting down.  "
 					+ "Queueing reconnect on %s", qa, e);
@@ -347,10 +349,20 @@ public final class MemcachedConnection extends SpyObject {
 			getLogger().info("Reconnecting due to failure to connect to %s",
 					qa, e);
 			queueReconnect(qa);
+		} catch (OperationException e) {
+			qa.setupForAuth(); // noop if !shouldAuth
+			getLogger().info("Reconnection due to exception " +
+				"handling a memcached operation on %s.  " +
+				"This may be due to an authentication failure.", qa, e);
+			lostConnection(qa);
 		} catch(Exception e) {
-			// Various errors occur on Linux that wind up here.  However, any
-			// particular error processing an item should simply cause us to
-			// reconnect to the server.
+			// Any particular error processing an item should simply
+			// cause us to reconnect to the server.
+			//
+			// One cause is just network oddness or servers
+			// restarting, which lead here with IOException
+
+			qa.setupForAuth(); // noop if !shouldAuth
 			getLogger().info("Reconnecting due to exception on %s", qa, e);
 			lostConnection(qa);
 		}
@@ -375,8 +387,9 @@ public final class MemcachedConnection extends SpyObject {
 		final SocketChannel channel = qa.getChannel();
 		int read=channel.read(rbuf);
 		if (read < 0) {
-		    // GRUMBLE.
-		    throw new IOException("Disconnected");
+		    // our model is to keep the connection alive for future ops
+		    // so we'll queue a reconnect if disconnected via an IOException
+		    throw new IOException("Disconnected unexpected, will reconnect.");
 		}
 		while(read > 0) {
 			getLogger().debug("Read %d bytes", read);

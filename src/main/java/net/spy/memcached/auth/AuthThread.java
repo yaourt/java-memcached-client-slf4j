@@ -44,6 +44,7 @@ public class AuthThread extends SpyThread {
 					// If the status we found was null, we're done.
 					if(val.getMessage().isEmpty()) {
 						done.set(true);
+						node.authComplete();
 						getLogger().info("Authenticated to "
 								+ node.getSocketAddress());
 					} else {
@@ -65,7 +66,13 @@ public class AuthThread extends SpyThread {
 				latch.await();
 				Thread.sleep(100);
 			} catch(InterruptedException e) {
+				// we can be interrupted if we were in the
+				// process of auth'ing and the connection is
+				// lost or dropped due to bad auth
 				Thread.currentThread().interrupt();
+				if (op != null) {
+					op.cancel();
+				}
 				done.set(true); // If we were interrupted, tear down.
 			}
 
@@ -78,6 +85,7 @@ public class AuthThread extends SpyThread {
 				}
 			}
 		}
+		return;
 	}
 
 	private Operation buildOperation(OperationStatus st, OperationCallback cb) {
